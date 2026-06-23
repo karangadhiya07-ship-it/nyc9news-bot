@@ -3,190 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NYC9News Bot</title>
-
+<title>NYC9News Live Bot</title>
 <style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:Arial, sans-serif;
-  background:#0f172a;
-  color:white;
-  padding:25px;
-}
-.container{
-  max-width:900px;
-  margin:auto;
-}
-h1{text-align:center}
-.card{
-  background:#1e293b;
-  border-radius:18px;
-  padding:22px;
-  margin-top:18px;
-  box-shadow:0 10px 30px #0005;
-}
-button{
-  background:#38bdf8;
-  color:#001;
-  border:0;
-  padding:13px 20px;
-  border-radius:10px;
-  font-weight:bold;
-  cursor:pointer;
-  margin:6px;
-}
-select{
-  padding:12px;
-  border-radius:10px;
-  border:0;
-  margin:6px;
-}
-.output{
-  background:#020617;
-  padding:18px;
-  border-radius:14px;
-  margin-top:18px;
-  white-space:pre-line;
-  line-height:1.6;
-}
-.tag{
-  display:inline-block;
-  background:#334155;
-  padding:6px 10px;
-  border-radius:20px;
-  margin:5px;
-}
+body{margin:0;font-family:Arial;background:#0f172a;color:white;padding:25px}
+.container{max-width:950px;margin:auto}
+.card{background:#1e293b;border-radius:18px;padding:22px;margin-top:18px}
+button,select{padding:12px 16px;border-radius:10px;border:0;margin:6px;font-weight:bold}
+button{background:#38bdf8;cursor:pointer}
+.news{background:#020617;padding:15px;border-radius:14px;margin:12px 0}
+a{color:#38bdf8}
+small{color:#94a3b8}
 </style>
 </head>
-
 <body>
 
 <div class="container">
-  <h1>NYC9News Bot</h1>
+<h1>NYC9News Live Bot</h1>
 
-  <div class="card">
-    <h2>Trending News Finder</h2>
+<div class="card">
+<select id="category">
+<option value="New York City news">NYC Local News</option>
+<option value="USA breaking news">USA Breaking News</option>
+<option value="AI technology news USA">AI & Tech</option>
+<option value="US business news">Business</option>
+<option value="US sports news">Sports</option>
+<option value="NYC weather alert">Weather</option>
+<option value="Moving to New York guide">Moving To New York</option>
+</select>
 
-    <select id="category">
-      <option>USA Breaking News</option>
-      <option>NYC Local News</option>
-      <option>Technology</option>
-      <option>Business</option>
-      <option>Sports</option>
-      <option>Weather</option>
-      <option>Moving To New York</option>
-    </select>
+<button onclick="loadNews()">Get Live News</button>
 
-    <br>
-
-    <button onclick="generateIdea()">Find News Idea</button>
-    <button onclick="generateTen()">Generate 10 Ideas</button>
-    <button onclick="copyText()">Copy Output</button>
-
-    <div id="output" class="output">
-Click button to generate NYC9News article ideas.
-    </div>
-  </div>
+<div id="output">Click “Get Live News” to fetch latest headlines.</div>
+</div>
 </div>
 
 <script>
-const ideas = {
-"USA Breaking News":[
-["US Economy Update", "What the latest economic numbers mean for American families", "US economy news", "economy update USA"],
-["New Policy Change", "Explain how the new policy may affect workers and families", "White House building", "USA policy news"],
-["Election Update", "Focus on voter impact and key issues", "US election voters", "election news USA"]
-],
-"NYC Local News":[
-["NYC Subway Delays", "Explain what commuters should know today", "New York subway station", "NYC subway delays"],
-["NYC Rent Prices", "Break down why rents are rising and who is affected", "NYC apartment buildings", "NYC rent guide"],
-["NYC Safety Update", "Keep it factual and focus on public safety tips", "NYC street police car", "NYC safety news"]
-],
-"Technology":[
-["AI Jobs in America", "Explain how AI is changing hiring and future careers", "AI technology office", "AI jobs USA"],
-["New AI Tool Launch", "Explain what the tool does and who can use it", "artificial intelligence laptop", "new AI tools"],
-["Big Tech Update", "Focus on users, privacy and business impact", "technology company office", "big tech news"]
-],
-"Business":[
-["Stock Market Today", "Explain market movement in simple language", "Wall Street building", "stock market today"],
-["Inflation Update", "Explain how prices affect daily life", "grocery shopping USA", "inflation USA"],
-["Housing Market News", "Explain buyer and renter impact", "real estate homes USA", "housing market USA"]
-],
-"Sports":[
-["NBA Trade News", "Explain how this affects the team and fans", "basketball court", "NBA trade news"],
-["NFL Season Update", "Focus on team performance and playoff chances", "football stadium USA", "NFL news"],
-["World Cup Update", "Explain match impact and what fans should watch next", "soccer stadium", "World Cup news"]
-],
-"Weather":[
-["NYC Weather Alert", "Explain timing, areas affected and safety tips", "NYC rainy street", "NYC weather today"],
-["US Storm Update", "Explain affected states and travel impact", "storm clouds USA", "US storm news"],
-["Heat Wave Warning", "Explain health and travel precautions", "hot city street", "heat wave USA"]
-],
-"Moving To New York":[
-["Cost of Living in NYC", "Explain rent, food, transport and monthly budget", "New York skyline apartment", "cost of living NYC"],
-["NYC Rent Guide", "Guide beginners on deposits, brokers and safe renting", "NYC apartment rental", "NYC rent guide"],
-["NYC Jobs for Newcomers", "Explain entry-level jobs and expected pay", "New York office workers", "NYC jobs guide"]
-]
-};
+async function loadNews(){
+  const q = document.getElementById("category").value;
+  const output = document.getElementById("output");
+  output.innerHTML = "Loading live news...";
 
-function makeArticle(item, category){
-  const title = item[0];
-  const angle = item[1];
-  const photo = item[2];
-  const keyword = item[3];
+  const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
 
-  return `CATEGORY: ${category}
+  const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
 
-SUGGESTED TITLE:
-${title}: What Readers Should Know
+  try{
+    const res = await fetch(api);
+    const data = await res.json();
 
-SEO TITLE:
-${title} Explained for NYC9News Readers
+    if(!data.items || data.items.length === 0){
+      output.innerHTML = "No news found. Try another category.";
+      return;
+    }
 
-ARTICLE ANGLE:
-${angle}
+    let html = "";
 
-PHOTO KEYWORD:
-${photo}
+    data.items.slice(0,10).forEach((item,index)=>{
+      const cleanTitle = item.title.replace(/ - .+$/,"");
+      const source = item.title.includes(" - ") ? item.title.split(" - ").pop() : "Google News";
 
-SEO KEYWORD:
-${keyword}
+      html += `
+      <div class="news">
+        <h3>${index+1}. ${cleanTitle}</h3>
+        <small>Source: ${source}</small><br><br>
 
-ARTICLE STRUCTURE:
-1. Quick summary
-2. What happened
-3. Why it matters
-4. Who is affected
-5. What happens next
-6. FAQ
+        <b>Suggested SEO Title:</b><br>
+        ${makeSeoTitle(cleanTitle)}<br><br>
 
-CTA:
-Follow NYC9News for simple USA and New York updates.
-`;
+        <b>Article Angle:</b><br>
+        ${makeAngle(q)}<br><br>
+
+        <b>Photo Keyword:</b><br>
+        ${makePhotoKeyword(q)}<br><br>
+
+        <b>Article Structure:</b><br>
+        1. Quick Summary<br>
+        2. What Happened<br>
+        3. Why It Matters<br>
+        4. Who Is Affected<br>
+        5. What Happens Next<br>
+        6. FAQ<br><br>
+
+        <a href="${item.link}" target="_blank">Open Source</a>
+      </div>
+      `;
+    });
+
+    output.innerHTML = html;
+
+  }catch(error){
+    output.innerHTML = "Live news load નથી થતું. RSS API block/limit હોઈ શકે.";
+  }
 }
 
-function generateIdea(){
-  const category = document.getElementById("category").value;
-  const list = ideas[category];
-  const item = list[Math.floor(Math.random()*list.length)];
-  document.getElementById("output").innerText = makeArticle(item, category);
+function makeSeoTitle(title){
+  return title + " Explained: What Readers Should Know";
 }
 
-function generateTen(){
-  let text = "";
-  Object.keys(ideas).forEach(category=>{
-    const list = ideas[category];
-    const item = list[Math.floor(Math.random()*list.length)];
-    text += makeArticle(item, category);
-    text += "\n-----------------------------\n\n";
-  });
-  document.getElementById("output").innerText = text;
+function makeAngle(q){
+  if(q.includes("New York City")) return "Focus on NYC residents, commuters, safety, rent, subway, and daily life impact.";
+  if(q.includes("AI")) return "Explain how this affects jobs, students, businesses, and future technology.";
+  if(q.includes("business")) return "Explain money impact in simple language for normal people.";
+  if(q.includes("sports")) return "Explain match/team impact and what fans should watch next.";
+  if(q.includes("weather")) return "Explain affected areas, timing, travel impact, and safety tips.";
+  if(q.includes("Moving")) return "Make it useful for people planning to move to New York.";
+  return "Explain what happened, why it matters, and how it affects Americans.";
 }
 
-function copyText(){
-  const text = document.getElementById("output").innerText;
-  navigator.clipboard.writeText(text);
-  alert("Copied!");
+function makePhotoKeyword(q){
+  if(q.includes("New York City")) return "New York City street, subway, skyline";
+  if(q.includes("AI")) return "AI technology laptop";
+  if(q.includes("business")) return "Wall Street business";
+  if(q.includes("sports")) return "sports stadium USA";
+  if(q.includes("weather")) return "NYC weather street";
+  if(q.includes("Moving")) return "New York apartment skyline";
+  return "USA news city";
 }
 </script>
 
