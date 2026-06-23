@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NYC9News Live Bot V8</title>
+<title>NYC9News Live Bot V9</title>
 <style>
 body{margin:0;font-family:Arial;background:#0f172a;color:white;padding:25px}
 .container{max-width:1150px;margin:auto}
@@ -20,7 +20,7 @@ small{color:#94a3b8}
 </head>
 <body>
 <div class="container">
-<h1>NYC9News Live Bot V8</h1>
+<h1>NYC9News Live Bot V9</h1>
 
 <div class="card">
 <select id="category">
@@ -74,10 +74,11 @@ for(const item of data.items){
  if(!trusted && count>=4)continue;
  count++;
  const photo=makePhotoKeyword(q);
- const img=await getWikimediaImage(photo);
+const img={url:"",credit:"AI Image Prompt",page:""};
+const imagePrompt=makeAIImagePrompt(title,q);
  const seo=makeSeoTitle(title,q),meta=makeMeta(title,q),angle=makeAngle(q),tags=makeTags(q);
  const score=makeScore(q,trusted),potential=makePotential(q),competition=makeCompetition(q);
- const pack=makePackage(title,item.link,seo,meta,angle,photo,tags,img);
+const pack=makePackage(title,item.link,seo,meta,angle,photo,tags,img,imagePrompt);
  lastResults.push({title,source,link:item.link,seo,meta,angle,photo,tags,img,pack});
  finalText+=pack+"\n\n----------------------\n\n";
  html+=`
@@ -87,7 +88,8 @@ for(const item of data.items){
  <span class="score">Score: ${score}/100</span>
  <span class="score">Traffic: ${potential}</span>
  <span class="score">Competition: ${competition}</span>
- ${img.url?`<img src="${img.url}"><small>Image: ${img.credit} | <a href="${img.page}" target="_blank">Image Source</a></small>`:`<p>No safe image found. Use Pexels/Unsplash manually.</p>`}
+<br><br><b>AI Image Prompt:</b>
+<pre>${imagePrompt}</pre>
  <br><br><b>SEO Title:</b><br>${seo}
  <br><br><b>Meta:</b><br>${meta}
  <br><br><b>Angle:</b><br>${angle}
@@ -114,7 +116,7 @@ return {url:info.url,credit:credit,page:"https://commons.wikimedia.org/wiki/"+en
 }catch(e){return {url:"",credit:"",page:""}}
 }
 
-function makePackage(title,link,seo,meta,angle,photo,tags,img){
+function makePackage(title,link,seo,meta,angle,photo,tags,img,imagePrompt){
 return `NYC9NEWS ARTICLE PACKAGE
 
 TOPIC:
@@ -135,12 +137,8 @@ ${tags}
 ARTICLE ANGLE:
 ${angle}
 
-SAFE IMAGE:
-${img.url || "No image found"}
-IMAGE CREDIT:
-${img.credit || "N/A"}
-IMAGE SOURCE:
-${img.page || "N/A"}
+AI IMAGE PROMPT:
+${imagePrompt}
 
 ARTICLE OUTLINE:
 1. Quick Summary
@@ -173,6 +171,29 @@ function makeTags(q){let x=q.toLowerCase();if(x.includes("finance")||x.includes(
 function makeScore(q,trusted){let s=60;if(trusted)s+=15;if(q.toLowerCase().includes("finance"))s+=12;if(q.toLowerCase().includes("new york"))s+=10;if(q.toLowerCase().includes("ai"))s+=10;return Math.min(s,98)}
 function makePotential(q){let x=q.toLowerCase();if(x.includes("finance"))return"High";if(x.includes("ai"))return"Medium-High";return"Medium"}
 function makeCompetition(q){let x=q.toLowerCase();if(x.includes("finance"))return"High";if(x.includes("new york"))return"Medium";return"High"}
+
+ function makeAIImagePrompt(title,q){
+  let x=q.toLowerCase();
+
+  if(x.includes("finance")||x.includes("stock")||x.includes("bitcoin")||x.includes("usd")){
+    return `Realistic editorial financial news photo about "${title}", Wall Street style office, person checking market data on laptop, natural lighting, documentary photojournalism, real-world look, no text, no logo, not cartoon, not AI-looking.`;
+  }
+
+  if(x.includes("new york")||x.includes("nyc")){
+    return `Realistic editorial NYC news photo about "${title}", New York City street or subway atmosphere, real commuters, natural lighting, documentary journalism style, authentic city look, no text, no logo, not cartoon, not AI-looking.`;
+  }
+
+  if(x.includes("ai")||x.includes("technology")){
+    return `Realistic editorial technology news photo about "${title}", modern office, laptop with AI concept, people working, natural lighting, documentary news photography style, no text, no logo, not cartoon, not AI-looking.`;
+  }
+
+  if(x.includes("weather")){
+    return `Realistic editorial weather news photo about "${title}", New York street with rain or cloudy sky, people walking, natural lighting, documentary journalism style, no text, no logo, not cartoon, not AI-looking.`;
+  }
+
+  return `Realistic editorial news photo about "${title}", American city background, natural lighting, documentary journalism style, authentic real-world look, no text, no logo, not cartoon, not AI-looking.`;
+}
+ 
 </script>
 </body>
 </html>
