@@ -3,27 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NYC9News Publisher AI V15</title>
+<title>NYC9News Publisher AI V20</title>
 <style>
-body{margin:0;font-family:Arial;background:#0f172a;color:white;padding:24px}
-.container{max-width:1250px;margin:auto}
-.card{background:#1e293b;border-radius:18px;padding:22px;margin-top:18px}
-button,select,input{padding:12px 16px;border-radius:10px;border:0;margin:6px;font-weight:bold}
-button{background:#38bdf8;cursor:pointer}
-.green{background:#22c55e}.red{background:#ef4444;color:white}.purple{background:#a855f7;color:white}.orange{background:#f97316;color:white}
-.news{background:#020617;padding:18px;border-radius:14px;margin:14px 0}
-a{color:#38bdf8}.badge{background:#16a34a;padding:5px 9px;border-radius:20px;font-size:12px}
-.score,.money{background:#facc15;color:#111;padding:5px 9px;border-radius:20px;font-size:12px;margin:4px;display:inline-block}
-.money{background:#22c55e}
-pre{white-space:pre-wrap;background:#111827;padding:12px;border-radius:10px;overflow:auto;font-size:13px}
+body{margin:0;font-family:Arial;background:#0f172a;color:white;padding:26px;font-size:17px}
+.container{max-width:1280px;margin:auto}
+.card{background:#1e293b;border-radius:18px;padding:24px;margin-top:18px}
+button,select,input{padding:13px 17px;border-radius:10px;border:0;margin:6px;font-weight:bold;font-size:15px}
+button{background:#38bdf8;cursor:pointer}.green{background:#22c55e}.red{background:#ef4444;color:white}.purple{background:#a855f7;color:white}.orange{background:#f97316;color:white}
+.news{background:#020617;padding:22px;border-radius:14px;margin:16px 0}
+a{color:#38bdf8}.badge{background:#16a34a;padding:6px 10px;border-radius:20px;font-size:13px}
+.score,.money{background:#facc15;color:#111;padding:6px 10px;border-radius:20px;font-size:13px;margin:4px;display:inline-block}.money{background:#22c55e}
+pre{white-space:pre-wrap;background:#111827;padding:14px;border-radius:10px;overflow:auto;font-size:15px;line-height:1.55}
 small{color:#94a3b8}
+h1{font-size:34px} h3{font-size:22px;line-height:1.35}
 </style>
 </head>
 <body>
-
 <div class="container">
-<h1>NYC9News Publisher AI V15</h1>
-
+<h1>NYC9News Publisher AI V20</h1>
 <div class="card">
 <select id="category">
 <option value="New York City news">NYC Local News</option>
@@ -35,162 +32,99 @@ small{color:#94a3b8}
 <option value="NYC weather alert">Weather</option>
 <option value="Moving to New York guide rent jobs cost of living">Moving To New York</option>
 </select>
-
 <input id="customTopic" placeholder="Search: Bitcoin, NYC Rent, Trump, AI">
-
 <br>
 <button onclick="loadNews()">Get Live News</button>
 <button onclick="loadCustom()">Search Topic</button>
 <button onclick="bestTopic()" class="orange">Best Topic Today</button>
+<button onclick="compareTopics()" class="purple">Compare Topics</button>
 <button onclick="copyAll()" class="green">Copy All</button>
 <button onclick="showSaved()">View Saved</button>
 <button onclick="clearSaved()" class="red">Clear Saved</button>
-
 <div id="output">Click “Get Live News” or search any topic.</div>
 </div>
 </div>
 
 <script>
-const trustedSources=[
-"Reuters","AP News","BBC","CNN","CNBC","ABC News","CBS News","NBC News","USA Today",
-"The New York Times","Fox News","Bloomberg","MarketWatch","Yahoo Finance","Investopedia",
-"Forbes","Time","NPR","Axios","Politico","The Verge","TechCrunch","ABC7 New York",
-"NBC New York","CBS New York","NY1","Gothamist","CoinDesk","The Globe and Mail"
-];
-
+const trustedSources=["Reuters","AP News","BBC","CNN","CNBC","ABC News","CBS News","NBC News","USA Today","The New York Times","Fox News","Bloomberg","MarketWatch","Yahoo Finance","Investopedia","Forbes","Time","NPR","Axios","Politico","The Verge","TechCrunch","ABC7 New York","NBC New York","CBS New York","NY1","Gothamist","CoinDesk","The Globe and Mail"];
 const blockedSources=["facebook.com","YouTube","TikTok","Reddit","Quora","Medium","Instagram"];
+let finalText="",lastResults=[];
 
-let finalText="";
-let lastResults=[];
-
-async function loadCustom(){
-  const t=document.getElementById("customTopic").value.trim();
-  if(!t){alert("Topic લખ");return}
-  await fetchNews(t);
-}
-
-async function loadNews(){
-  await fetchNews(document.getElementById("category").value);
-}
+async function loadCustom(){const t=document.getElementById("customTopic").value.trim();if(!t){alert("Topic લખ");return}await fetchNews(t)}
+async function loadNews(){await fetchNews(document.getElementById("category").value)}
 
 async function fetchNews(q){
-  const output=document.getElementById("output");
-  output.innerHTML="Loading V15 live news...";
-  finalText="";
-  lastResults=[];
+const output=document.getElementById("output");output.innerHTML="Loading V20 live news...";finalText="";lastResults=[];
+const rss=`https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
+const api=`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rss)}`;
+try{
+const res=await fetch(api),data=await res.json();
+if(!data.items){output.innerHTML="No news found.";return}
+let html="",count=0;
+for(const item of data.items){
+if(count>=10)break;
+const source=item.title.includes(" - ")?item.title.split(" - ").pop():"Google News";
+const title=item.title.replace(/ - .+$/,"");
+if(blockedSources.some(b=>source.toLowerCase().includes(b.toLowerCase())))continue;
+const trusted=trustedSources.some(s=>source.toLowerCase().includes(s.toLowerCase()));
+if(!trusted && count>=5)continue;
+const pack=buildPack(title,item.link,source,q,trusted);
+lastResults.push(pack);finalText+=pack.full+"\n\n----------------------\n\n";count++;
+html+=`
+<div class="news">
+<h3>${count}. ${title}</h3>
+<small>Source: ${source}</small> ${trusted?'<span class="badge">Trusted</span>':''}<br><br>
+<span class="score">Viral: ${pack.viral}/100</span>
+<span class="score">SEO: ${pack.seoScore}/100</span>
+<span class="score">AdSense: ${pack.adsense}/100</span>
+<span class="score">Evergreen: ${pack.evergreen}/100</span>
+<span class="money">RPM: ${pack.rpm}</span>
+<span class="money">Revenue: ${pack.revenue}</span>
+<span class="money">Worth: ${pack.worth}</span>
+<br><br>
+<b>Priority:</b> ${pack.priority}<br>
+<b>Best Publish Time:</b> ${pack.publishTime}<br>
+<b>Article Length:</b> ${pack.length}<br>
+<b>Monthly Searches:</b> ${pack.searches}<br>
+<b>CPC:</b> ${pack.cpc}<br>
+<b>Competition:</b> ${pack.competition}<br>
+<b>Affiliate:</b> ${pack.affiliate}<br>
+<b>Sponsorship:</b> ${pack.sponsor}<br>
+<b>Best Ad Placement:</b> ${pack.ads}<br>
+<b>WordPress Category:</b> ${pack.wpCat}<br><br>
 
-  const rss=`https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
-  const api=`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rss)}`;
+<b>SEO Title:</b><br>${pack.seoTitle}<br><br>
+<b>Meta:</b><br>${pack.meta}<br><br>
+<b>AI Image Prompt:</b><pre>${pack.imagePrompt}</pre>
 
-  try{
-    const res=await fetch(api);
-    const data=await res.json();
+<button onclick="copyText(lastResults[${count-1}].imagePrompt)" class="purple">Copy Image Prompt</button>
+<button onclick="copyText(lastResults[${count-1}].wpPost)" class="orange">Copy WordPress Post</button>
+<button onclick="copyText(lastResults[${count-1}].full)" class="green">Copy Full V20 Pack</button>
+<a href="${item.link}" target="_blank">Open Source</a>
 
-    if(!data.items){
-      output.innerHTML="No news found.";
-      return;
-    }
-
-    let html="";
-    let count=0;
-
-    for(const item of data.items){
-      if(count>=10)break;
-
-      const source=item.title.includes(" - ")?item.title.split(" - ").pop():"Google News";
-      const title=item.title.replace(/ - .+$/,"");
-
-      if(blockedSources.some(b=>source.toLowerCase().includes(b.toLowerCase())))continue;
-
-      const trusted=trustedSources.some(s=>source.toLowerCase().includes(s.toLowerCase()));
-      if(!trusted && count>=5)continue;
-
-      const pack=buildPack(title,item.link,source,q,trusted);
-      lastResults.push(pack);
-      finalText+=pack.full+"\n\n----------------------\n\n";
-      count++;
-
-      html+=`
-      <div class="news">
-        <h3>${count}. ${title}</h3>
-        <small>Source: ${source}</small> ${trusted?'<span class="badge">Trusted</span>':''}<br><br>
-
-        <span class="score">Viral: ${pack.viral}/100</span>
-        <span class="score">SEO: ${pack.seoScore}/100</span>
-        <span class="score">AdSense: ${pack.adsense}/100</span>
-        <span class="score">Evergreen: ${pack.evergreen}/100</span>
-        <span class="money">RPM: ${pack.rpm}</span>
-        <span class="money">Worth: ${pack.worth}</span>
-
-        <br><br><b>Publish Priority:</b> ${pack.priority}
-        <br><b>Best Publish Time:</b> ${pack.publishTime}
-        <br><b>Article Length:</b> ${pack.length}
-        <br><b>Estimated Monthly Searches:</b> ${pack.searches}
-        <br><b>Estimated CPC:</b> ${pack.cpc}
-        <br><b>Competition:</b> ${pack.competition}
-        <br><b>Affiliate Potential:</b> ${pack.affiliate}
-        <br><b>Sponsorship Potential:</b> ${pack.sponsor}
-
-        <br><br><b>SEO Title:</b><br>${pack.seoTitle}
-        <br><br><b>Meta:</b><br>${pack.meta}
-        <br><br><b>Related Keywords:</b><br>${pack.keywords}
-        <br><br><b>AI Image Prompt:</b>
-        <pre>${pack.imagePrompt}</pre>
-
-        <button onclick="copyText(lastResults[${count-1}].imagePrompt)" class="purple">Copy Image Prompt</button>
-        <button onclick="copyText(lastResults[${count-1}].seoTitle)">Copy SEO Title</button>
-        <button onclick="copyText(lastResults[${count-1}].full)" class="green">Copy Full Pack</button>
-
-        <br><br><b>Full V15 Package:</b>
-        <pre>${pack.full}</pre>
-
-        <button onclick="saveTopic(${count-1})" class="green">Save Topic</button>
-        <a href="${item.link}" target="_blank">Open Source</a>
-      </div>`;
-    }
-
-    output.innerHTML=html || "No trusted headlines found.";
-  }catch(e){
-    output.innerHTML="Live load failed. RSS/API limit હોઈ શકે.";
-  }
+<br><br><b>Full V20 Package:</b><pre>${pack.full}</pre>
+<button onclick="saveTopic(${count-1})" class="green">Save Topic</button>
+</div>`;
+}
+output.innerHTML=html||"No trusted headlines found.";
+}catch(e){output.innerHTML="Live load failed. RSS/API limit હોઈ શકે."}
 }
 
 function buildPack(title,link,source,q,trusted){
-  const x=(title+" "+q).toLowerCase();
+const x=(title+" "+q).toLowerCase(),cat=detectCategory(x);
+const seoTitle=makeSeoTitle(title,cat),meta=makeMeta(title,cat),angle=makeAngle(cat);
+const keywords=makeKeywords(cat),hashtags=makeHashtags(cat),imagePrompt=makeAIImagePrompt(title,cat);
+const viral=makeViralScore(x,trusted),seoScore=makeSEOScore(x,cat),adsense=makeAdSenseScore(cat),evergreen=makeEvergreenScore(x,cat);
+const searches=makeSearches(cat),cpc=makeCPC(cat),rpm=makeRPM(cat),competition=makeCompetition(cat);
+const affiliate=makeAffiliate(cat),sponsor=makeSponsor(cat),priority=makePriority(viral,seoScore,adsense,evergreen,rpm),worth=makeWorth(priority,rpm,competition);
+const publishTime=makePublishTime(cat),length=makeLength(cat,x),related=makeRelatedArticles(cat),altTitles=makeAltTitles(title);
+const faq=makeFAQ(),schema=makeSchema(seoTitle,meta),internal=makeInternalLinks(cat),external=makeExternalLinks(cat),checklist=makeSEOChecklist();
+const insta=makeInstagram(title),tweet=makeTweet(title),youtube=makeYouTube(title),thumb=makeThumbnail(title,cat),calendar=makeCalendar(cat);
+const ads=makeAdPlacement(cat),revenue=makeRevenue(cat),wpCat=makeWPCat(cat),htmlArticle=makeHTMLArticle(title,seoTitle,meta,angle,faq,internal,external);
+const wpPost=makeWPPost(title,seoTitle,meta,cat,keywords,hashtags,imagePrompt,htmlArticle);
+const affiliateProducts=makeAffiliateProducts(cat),monetization=makeMonetization(cat),social=makeSocialPack(title),email=makeNewsletter(title),rss=makeRSSIdea(title);
 
-  const category=detectCategory(x);
-  const seoTitle=makeSeoTitle(title,category);
-  const meta=makeMeta(title,category);
-  const angle=makeAngle(category);
-  const keywords=makeKeywords(title,category);
-  const hashtags=makeHashtags(category);
-  const imagePrompt=makeAIImagePrompt(title,category);
-  const viral=makeViralScore(x,trusted);
-  const seoScore=makeSEOScore(x,category);
-  const adsense=makeAdSenseScore(category);
-  const evergreen=makeEvergreenScore(x,category);
-  const searches=makeSearches(category,x);
-  const cpc=makeCPC(category,x);
-  const rpm=makeRPM(category,x);
-  const competition=makeCompetition(category,x);
-  const affiliate=makeAffiliate(category,x);
-  const sponsor=makeSponsor(category,x);
-  const priority=makePriority(viral,seoScore,adsense,evergreen,rpm);
-  const worth=makeWorth(priority,rpm,competition);
-  const publishTime=makePublishTime(category);
-  const length=makeLength(category,x);
-  const related=makeRelatedArticles(title,category);
-  const altTitles=makeAltTitles(title,category);
-  const faq=makeFAQ(title,category);
-  const schema=makeSchema(seoTitle,meta);
-  const internal=makeInternalLinks(category);
-  const external=makeExternalLinks(category);
-  const insta=makeInstagram(title);
-  const tweet=makeTweet(title);
-  const youtube=makeYouTube(title);
-  const checklist=makeSEOChecklist();
-
-  const full=`NYC9NEWS PUBLISHER AI V15 PACKAGE
+const full=`NYC9NEWS PUBLISHER AI V20 PACKAGE
 
 TOPIC:
 ${title}
@@ -200,7 +134,7 @@ ${source}
 ${link}
 
 AUTO CATEGORY:
-${category}
+${cat}
 
 PUBLISH PRIORITY:
 ${priority}
@@ -229,6 +163,9 @@ ${cpc}
 ESTIMATED ADSENSE RPM:
 ${rpm}
 
+ESTIMATED MONTHLY REVENUE:
+${revenue}
+
 COMPETITION:
 ${competition}
 
@@ -238,11 +175,17 @@ ${affiliate}
 SPONSORSHIP POTENTIAL:
 ${sponsor}
 
+BEST AD PLACEMENT:
+${ads}
+
 BEST PUBLISH TIME:
 ${publishTime}
 
 SUGGESTED ARTICLE LENGTH:
 ${length}
+
+WORDPRESS CATEGORY:
+${wpCat}
 
 SEO TITLE:
 ${seoTitle}
@@ -250,7 +193,7 @@ ${seoTitle}
 META DESCRIPTION:
 ${meta}
 
-10 ALTERNATIVE HEADLINES:
+10 VIRAL HEADLINES:
 ${altTitles}
 
 RELATED KEYWORDS:
@@ -265,17 +208,26 @@ ${angle}
 AI IMAGE PROMPT:
 ${imagePrompt}
 
-INTERNAL LINK SUGGESTIONS:
+THUMBNAIL PROMPT:
+${thumb}
+
+INTERNAL LINKS:
 ${internal}
 
-EXTERNAL LINK SUGGESTIONS:
+EXTERNAL LINKS:
 ${external}
 
-RELATED ARTICLE IDEAS:
+RELATED ARTICLES:
 ${related}
 
-FAQ GENERATOR:
+FAQ:
 ${faq}
+
+AFFILIATE PRODUCT IDEAS:
+${affiliateProducts}
+
+MONETIZATION PLAN:
+${monetization}
 
 INSTAGRAM CAPTION:
 ${insta}
@@ -283,8 +235,20 @@ ${insta}
 X/TWITTER POST:
 ${tweet}
 
-YOUTUBE SHORT IDEA:
+YOUTUBE SHORT:
 ${youtube}
+
+SOCIAL PACK:
+${social}
+
+NEWSLETTER BLURB:
+${email}
+
+RSS/GOOGLE NEWS SUMMARY:
+${rss}
+
+CONTENT CALENDAR IDEA:
+${calendar}
 
 SEO CHECKLIST:
 ${checklist}
@@ -292,13 +256,11 @@ ${checklist}
 SCHEMA MARKUP:
 ${schema}
 
-ARTICLE OUTLINE:
-1. Quick Summary
-2. What Happened
-3. Why It Matters
-4. Who Is Affected
-5. What Happens Next
-6. FAQ
+WORDPRESS READY HTML:
+${htmlArticle}
+
+WORDPRESS POST PACKAGE:
+${wpPost}
 
 FULL ARTICLE PROMPT:
 Write a ${length} original article for NYC9News.
@@ -315,189 +277,40 @@ ${seoTitle}
 Meta Description:
 ${meta}
 
-Article Angle:
-${angle}
-
 Rules:
 - Use simple American English.
 - Do not copy the source.
 - Keep it neutral and factual.
 - Add a 2-line summary at the top.
-- Include headings:
-  What Happened
-  Why It Matters
-  Who Is Affected
-  What Happens Next
-  FAQ
-- Add internal link suggestions naturally.
-- Make it useful for USA and NYC readers.
+- Include headings: What Happened, Why It Matters, Who Is Affected, What Happens Next, FAQ.
+- Add internal links naturally.
 - End with: Follow NYC9News for simple USA and New York updates.`;
 
-  return {title,link,source,category,seoTitle,meta,angle,keywords,hashtags,imagePrompt,viral,seoScore,adsense,evergreen,searches,cpc,rpm,competition,affiliate,sponsor,priority,worth,publishTime,length,related,altTitles,faq,schema,internal,external,insta,tweet,youtube,checklist,full};
+return {title,link,source,cat,seoTitle,meta,angle,keywords,hashtags,imagePrompt,viral,seoScore,adsense,evergreen,searches,cpc,rpm,competition,affiliate,sponsor,priority,worth,publishTime,length,related,altTitles,faq,schema,internal,external,insta,tweet,youtube,thumb,calendar,ads,revenue,wpCat,htmlArticle,wpPost,affiliateProducts,monetization,social,email,rss,checklist,full};
 }
 
-function detectCategory(x){
-  if(x.includes("bitcoin")||x.includes("crypto")||x.includes("stock")||x.includes("fed")||x.includes("finance")||x.includes("usd"))return "Finance";
-  if(x.includes("new york")||x.includes("nyc")||x.includes("subway")||x.includes("rent"))return "NYC Local";
-  if(x.includes("ai")||x.includes("technology")||x.includes("openai")||x.includes("tesla"))return "AI & Tech";
-  if(x.includes("weather")||x.includes("storm")||x.includes("rain"))return "Weather";
-  if(x.includes("nba")||x.includes("nfl")||x.includes("world cup")||x.includes("sports"))return "Sports";
-  if(x.includes("moving")||x.includes("cost of living")||x.includes("apartment"))return "Moving To New York";
-  if(x.includes("business")||x.includes("economy"))return "Business";
-  return "USA Breaking";
-}
-
-function makeSeoTitle(t,c){
-  if(c==="Finance")return t+" Explained: What It Means for Your Money";
-  if(c==="NYC Local")return t+" Explained for New Yorkers";
-  if(c==="AI & Tech")return t+" Explained: Jobs, Tech and What Comes Next";
-  if(c==="Moving To New York")return t+" Guide: What Newcomers Should Know";
-  return t+" Explained: What Readers Should Know";
-}
-
-function makeMeta(t,c){
-  return t+" explained with key facts, impact, and what readers should know next.";
-}
-
-function makeAngle(c){
-  if(c==="Finance")return "Focus on money impact, markets, savings, loans, credit cards, inflation, and everyday Americans.";
-  if(c==="NYC Local")return "Focus on NYC residents, commuters, rent, subway, safety, and daily life impact.";
-  if(c==="AI & Tech")return "Explain how this affects jobs, students, businesses, and future technology.";
-  if(c==="Weather")return "Explain timing, affected areas, travel impact, and safety tips.";
-  if(c==="Moving To New York")return "Make it useful for people planning to move to New York.";
-  return "Explain what happened, why it matters, and how it affects Americans.";
-}
-
-function makeAIImagePrompt(t,c){
-  if(c==="Finance")return `Ultra realistic editorial financial news photograph about "${t}", Wall Street traders, stock market screens, financial district atmosphere, realistic people, natural lighting, Reuters style photojournalism, authentic news photography, professional DSLR camera, no text, no logo, highly realistic.`;
-  if(c==="NYC Local")return `Realistic editorial NYC news photo about "${t}", New York City street or subway atmosphere, real commuters, natural lighting, documentary journalism style, authentic city look, no text, no logo, not cartoon, not AI-looking.`;
-  if(c==="AI & Tech")return `Realistic editorial technology news photo about "${t}", modern office, laptop with AI concept, people working, natural lighting, documentary news photography style, no text, no logo, not cartoon, not AI-looking.`;
-  return `Realistic editorial news photo about "${t}", American city background, natural lighting, documentary journalism style, authentic real-world look, no text, no logo, not cartoon, not AI-looking.`;
-}
-
-function makeKeywords(t,c){
-  if(c==="Finance")return "finance news, stock market, bitcoin, federal reserve, inflation, money, personal finance";
-  if(c==="NYC Local")return "NYC news, New York update, subway, rent, local news, New Yorkers";
-  if(c==="AI & Tech")return "AI news, technology, AI jobs, tech tools, future of work";
-  if(c==="Moving To New York")return "moving to New York, NYC rent, NYC jobs, cost of living NYC";
-  return "USA news, breaking news, latest update, what happened, why it matters";
-}
-
-function makeHashtags(c){
-  if(c==="Finance")return "#Finance #StockMarket #Bitcoin #Money #USNews";
-  if(c==="NYC Local")return "#NYC #NewYork #NYCNews #LocalNews";
-  if(c==="AI & Tech")return "#AI #TechNews #ArtificialIntelligence #Jobs";
-  return "#USNews #BreakingNews #NYC9News";
-}
-
-function makeViralScore(x,trusted){
-  let s=55;
-  if(trusted)s+=12;
-  if(x.includes("bitcoin")||x.includes("ai")||x.includes("trump")||x.includes("tesla"))s+=15;
-  if(x.includes("breaking")||x.includes("major")||x.includes("warning"))s+=10;
-  if(x.includes("nyc")||x.includes("new york"))s+=8;
-  return Math.min(s,98);
-}
-
-function makeSEOScore(x,c){
-  let s=60;
-  if(c==="Moving To New York")s+=18;
-  if(c==="Finance")s+=15;
-  if(c==="AI & Tech")s+=12;
-  if(x.includes("explained")||x.includes("guide"))s+=8;
-  return Math.min(s,97);
-}
-
-function makeAdSenseScore(c){
-  if(c==="Finance")return 95;
-  if(c==="Moving To New York")return 88;
-  if(c==="AI & Tech")return 82;
-  if(c==="NYC Local")return 75;
-  return 68;
-}
-
-function makeEvergreenScore(x,c){
-  if(c==="Moving To New York")return 94;
-  if(c==="Finance")return x.includes("today")?65:82;
-  if(c==="AI & Tech")return 76;
-  if(c==="NYC Local")return 58;
-  return 45;
-}
-
-function makeSearches(c,x){
-  if(c==="Finance")return "10K-250K/month";
-  if(c==="Moving To New York")return "5K-80K/month";
-  if(c==="AI & Tech")return "8K-150K/month";
-  if(c==="NYC Local")return "2K-60K/month";
-  return "1K-50K/month";
-}
-
-function makeCPC(c,x){
-  if(c==="Finance")return "$4-$25";
-  if(c==="Moving To New York")return "$2-$12";
-  if(c==="AI & Tech")return "$1-$8";
-  return "$0.50-$5";
-}
-
-function makeRPM(c,x){
-  if(c==="Finance")return "$15-$40 RPM";
-  if(c==="Moving To New York")return "$8-$25 RPM";
-  if(c==="AI & Tech")return "$5-$18 RPM";
-  if(c==="Sports")return "$2-$8 RPM";
-  return "$3-$12 RPM";
-}
-
-function makeCompetition(c,x){
-  if(c==="Finance")return "High";
-  if(c==="Moving To New York")return "Low-Medium";
-  if(c==="AI & Tech")return "Medium";
-  if(c==="NYC Local")return "Medium";
-  return "High";
-}
-
-function makeAffiliate(c,x){
-  if(c==="Finance")return "Very High";
-  if(c==="Moving To New York")return "High";
-  if(c==="AI & Tech")return "Medium-High";
-  return "Low-Medium";
-}
-
-function makeSponsor(c,x){
-  if(c==="NYC Local"||c==="Moving To New York")return "High";
-  if(c==="Finance"||c==="AI & Tech")return "Medium-High";
-  return "Medium";
-}
-
-function makePriority(v,seo,ads,ever,rpm){
-  let total=v+seo+ads+ever;
-  if(rpm.includes("$15"))total+=20;
-  if(total>=340)return "⭐⭐⭐⭐⭐ HIGH";
-  if(total>=300)return "⭐⭐⭐⭐ MEDIUM-HIGH";
-  return "⭐⭐⭐ MEDIUM";
-}
-
-function makeWorth(priority,rpm,comp){
-  if(priority.includes("HIGH"))return "YES";
-  if(rpm.includes("$15")||rpm.includes("$8"))return "YES";
-  if(comp==="High")return "MAYBE";
-  return "YES";
-}
-
-function makePublishTime(c){
-  if(c==="Finance")return "8:00 AM - 10:00 AM EST";
-  if(c==="NYC Local")return "7:00 AM - 9:00 AM EST";
-  if(c==="Sports")return "6:00 PM - 10:00 PM EST";
-  return "8:00 AM - 11:00 AM EST";
-}
-
-function makeLength(c,x){
-  if(c==="Finance"||c==="Moving To New York")return "1000-1200 words";
-  if(x.includes("breaking"))return "500-700 words";
-  return "800-1000 words";
-}
-
-function makeAltTitles(t,c){
-  return `1. ${t}: What Readers Should Know
+function detectCategory(x){if(x.includes("bitcoin")||x.includes("crypto")||x.includes("stock")||x.includes("fed")||x.includes("finance")||x.includes("usd"))return"Finance";if(x.includes("new york")||x.includes("nyc")||x.includes("subway")||x.includes("rent"))return"NYC Local";if(x.includes("ai")||x.includes("technology")||x.includes("openai")||x.includes("tesla"))return"AI & Tech";if(x.includes("weather")||x.includes("storm")||x.includes("rain"))return"Weather";if(x.includes("nba")||x.includes("nfl")||x.includes("world cup")||x.includes("sports"))return"Sports";if(x.includes("moving")||x.includes("cost of living")||x.includes("apartment"))return"Moving To New York";if(x.includes("business")||x.includes("economy"))return"Business";return"USA Breaking"}
+function makeSeoTitle(t,c){if(c==="Finance")return t+" Explained: What It Means for Your Money";if(c==="NYC Local")return t+" Explained for New Yorkers";if(c==="AI & Tech")return t+" Explained: Jobs, Tech and What Comes Next";if(c==="Moving To New York")return t+" Guide: What Newcomers Should Know";return t+" Explained: What Readers Should Know"}
+function makeMeta(t,c){return t+" explained with key facts, impact, and what readers should know next."}
+function makeAngle(c){if(c==="Finance")return"Focus on money impact, markets, savings, loans, credit cards, inflation, and everyday Americans.";if(c==="NYC Local")return"Focus on NYC residents, commuters, rent, subway, safety, and daily life impact.";if(c==="AI & Tech")return"Explain how this affects jobs, students, businesses, and future technology.";if(c==="Weather")return"Explain timing, affected areas, travel impact, and safety tips.";if(c==="Moving To New York")return"Make it useful for people planning to move to New York.";return"Explain what happened, why it matters, and how it affects Americans."}
+function makeAIImagePrompt(t,c){if(c==="Finance")return`Ultra realistic editorial financial news photograph about "${t}", Wall Street traders, stock market screens, financial district atmosphere, realistic people, natural lighting, Reuters style photojournalism, authentic news photography, professional DSLR camera, no text, no logo, highly realistic.`;if(c==="NYC Local")return`Realistic editorial NYC news photo about "${t}", New York City street or subway atmosphere, real commuters, natural lighting, documentary journalism style, authentic city look, no text, no logo, not cartoon, not AI-looking.`;if(c==="AI & Tech")return`Realistic editorial technology news photo about "${t}", modern office, laptop with AI concept, people working, natural lighting, documentary news photography style, no text, no logo, not cartoon, not AI-looking.`;return`Realistic editorial news photo about "${t}", American city background, natural lighting, documentary journalism style, authentic real-world look, no text, no logo, not cartoon, not AI-looking.`}
+function makeKeywords(c){if(c==="Finance")return"finance news, stock market, bitcoin, federal reserve, inflation, money, personal finance";if(c==="NYC Local")return"NYC news, New York update, subway, rent, local news, New Yorkers";if(c==="AI & Tech")return"AI news, technology, AI jobs, tech tools, future of work";if(c==="Moving To New York")return"moving to New York, NYC rent, NYC jobs, cost of living NYC";return"USA news, breaking news, latest update, what happened, why it matters"}
+function makeHashtags(c){if(c==="Finance")return"#Finance #StockMarket #Bitcoin #Money #USNews";if(c==="NYC Local")return"#NYC #NewYork #NYCNews #LocalNews";if(c==="AI & Tech")return"#AI #TechNews #ArtificialIntelligence #Jobs";return"#USNews #BreakingNews #NYC9News"}
+function makeViralScore(x,trusted){let s=55;if(trusted)s+=12;if(x.includes("bitcoin")||x.includes("ai")||x.includes("trump")||x.includes("tesla"))s+=15;if(x.includes("breaking")||x.includes("major")||x.includes("warning"))s+=10;if(x.includes("nyc")||x.includes("new york"))s+=8;return Math.min(s,98)}
+function makeSEOScore(x,c){let s=60;if(c==="Moving To New York")s+=18;if(c==="Finance")s+=15;if(c==="AI & Tech")s+=12;if(x.includes("explained")||x.includes("guide"))s+=8;return Math.min(s,97)}
+function makeAdSenseScore(c){if(c==="Finance")return 95;if(c==="Moving To New York")return 88;if(c==="AI & Tech")return 82;if(c==="NYC Local")return 75;return 68}
+function makeEvergreenScore(x,c){if(c==="Moving To New York")return 94;if(c==="Finance")return x.includes("today")?65:82;if(c==="AI & Tech")return 76;if(c==="NYC Local")return 58;return 45}
+function makeSearches(c){if(c==="Finance")return"10K-250K/month";if(c==="Moving To New York")return"5K-80K/month";if(c==="AI & Tech")return"8K-150K/month";if(c==="NYC Local")return"2K-60K/month";return"1K-50K/month"}
+function makeCPC(c){if(c==="Finance")return"$4-$25";if(c==="Moving To New York")return"$2-$12";if(c==="AI & Tech")return"$1-$8";return"$0.50-$5"}
+function makeRPM(c){if(c==="Finance")return"$15-$40 RPM";if(c==="Moving To New York")return"$8-$25 RPM";if(c==="AI & Tech")return"$5-$18 RPM";if(c==="Sports")return"$2-$8 RPM";return"$3-$12 RPM"}
+function makeCompetition(c){if(c==="Finance")return"High";if(c==="Moving To New York")return"Low-Medium";if(c==="AI & Tech")return"Medium";if(c==="NYC Local")return"Medium";return"High"}
+function makeAffiliate(c){if(c==="Finance")return"Very High";if(c==="Moving To New York")return"High";if(c==="AI & Tech")return"Medium-High";return"Low-Medium"}
+function makeSponsor(c){if(c==="NYC Local"||c==="Moving To New York")return"High";if(c==="Finance"||c==="AI & Tech")return"Medium-High";return"Medium"}
+function makePriority(v,seo,ads,ever,rpm){let total=v+seo+ads+ever;if(rpm.includes("$15"))total+=20;if(total>=340)return"⭐⭐⭐⭐⭐ HIGH";if(total>=300)return"⭐⭐⭐⭐ MEDIUM-HIGH";return"⭐⭐⭐ MEDIUM"}
+function makeWorth(priority,rpm,comp){if(priority.includes("HIGH"))return"YES";if(rpm.includes("$15")||rpm.includes("$8"))return"YES";if(comp==="High")return"MAYBE";return"YES"}
+function makePublishTime(c){if(c==="Finance")return"8:00 AM - 10:00 AM EST";if(c==="NYC Local")return"7:00 AM - 9:00 AM EST";if(c==="Sports")return"6:00 PM - 10:00 PM EST";return"8:00 AM - 11:00 AM EST"}
+function makeLength(c,x){if(c==="Finance"||c==="Moving To New York")return"1000-1200 words";if(x.includes("breaking"))return"500-700 words";return"800-1000 words"}
+function makeAltTitles(t){return`1. ${t}: What Readers Should Know
 2. ${t} Explained Simply
 3. Why ${t} Matters Now
 4. How ${t} Could Affect Americans
@@ -506,53 +319,19 @@ function makeAltTitles(t,c){
 7. ${t} and What It Means for You
 8. The Simple Guide to ${t}
 9. ${t}: Full Breakdown
-10. ${t}: Latest Update and Analysis`;
-}
-
-function makeRelatedArticles(t,c){
-  if(c==="Finance")return "1. How Interest Rates Affect Your Money\n2. Stock Market Today Explained\n3. Best Personal Finance Tips";
-  if(c==="NYC Local")return "1. NYC Subway Guide\n2. NYC Rent Guide\n3. What New Yorkers Should Know Today";
-  if(c==="AI & Tech")return "1. Best AI Tools for Students\n2. How AI Is Changing Jobs\n3. AI News Explained";
-  return "1. What Happened Today\n2. Why This News Matters\n3. What Readers Should Watch Next";
-}
-
-function makeFAQ(t,c){
-  return `Q1. What happened?
+10. ${t}: Latest Update and Analysis`}
+function makeRelatedArticles(c){if(c==="Finance")return"1. How Interest Rates Affect Your Money\n2. Stock Market Today Explained\n3. Best Personal Finance Tips";if(c==="NYC Local")return"1. NYC Subway Guide\n2. NYC Rent Guide\n3. What New Yorkers Should Know Today";if(c==="AI & Tech")return"1. Best AI Tools for Students\n2. How AI Is Changing Jobs\n3. AI News Explained";return"1. What Happened Today\n2. Why This News Matters\n3. What Readers Should Watch Next"}
+function makeFAQ(){return`Q1. What happened?
 Q2. Why does this matter?
 Q3. Who is affected?
 Q4. What happens next?
-Q5. Where can readers get updates?`;
-}
-
-function makeSchema(title,meta){
-  return `<script type="application/ld+json">
-{
- "@context":"https://schema.org",
- "@type":"NewsArticle",
- "headline":"${title}",
- "description":"${meta}",
- "author":{"@type":"Organization","name":"NYC9News"},
- "publisher":{"@type":"Organization","name":"NYC9News"}
-}
-<\/script>`;
-}
-
-function makeInternalLinks(c){
-  if(c==="Finance")return "Link to: Finance, Stock Market, Inflation Explained";
-  if(c==="NYC Local")return "Link to: NYC News, Subway Guide, Rent Guide";
-  if(c==="AI & Tech")return "Link to: AI News, Tech Jobs, AI Tools";
-  return "Link to related NYC9News category pages.";
-}
-
-function makeExternalLinks(c){
-  if(c==="Finance")return "Federal Reserve, SEC, Yahoo Finance, MarketWatch";
-  if(c==="NYC Local")return "NYC.gov, MTA.info, Weather.gov";
-  if(c==="AI & Tech")return "Official company blog, government AI policy pages";
-  return "Official source, government source, trusted news source.";
-}
-
-function makeSEOChecklist(){
-  return `✅ SEO title under 70 characters
+Q5. Where can readers get updates?`}
+function makeSchema(title,meta){return`<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"NewsArticle","headline":"${title}","description":"${meta}","author":{"@type":"Organization","name":"NYC9News"},"publisher":{"@type":"Organization","name":"NYC9News"}}
+<\/script>`}
+function makeInternalLinks(c){if(c==="Finance")return"Link to: Finance, Stock Market, Inflation Explained";if(c==="NYC Local")return"Link to: NYC News, Subway Guide, Rent Guide";if(c==="AI & Tech")return"Link to: AI News, Tech Jobs, AI Tools";return"Link to related NYC9News category pages."}
+function makeExternalLinks(c){if(c==="Finance")return"Federal Reserve, SEC, Yahoo Finance, MarketWatch";if(c==="NYC Local")return"NYC.gov, MTA.info, Weather.gov";if(c==="AI & Tech")return"Official company blog, government AI policy pages";return"Official source, government source, trusted news source."}
+function makeSEOChecklist(){return`✅ SEO title under 70 characters
 ✅ Meta description added
 ✅ Featured image added
 ✅ Source cited
@@ -561,24 +340,45 @@ function makeSEOChecklist(){
 ✅ Original wording
 ✅ No copyrighted image
 ✅ Mobile friendly
-✅ Clear author/date`;
-}
+✅ Clear author/date`}
+function makeInstagram(t){return`${t}\n\nHere’s what happened, why it matters, and what readers should know next.\n\nRead more on NYC9News.`}
+function makeTweet(t){return`${t}\n\nWhat happened, why it matters, and what comes next — explained simply by NYC9News.`}
+function makeYouTube(t){return`Title: ${t} Explained in 60 Seconds\nDescription: A quick breakdown of what happened, why it matters, and what comes next.`}
+function makeThumbnail(t,c){return`Realistic YouTube/news thumbnail prompt for "${t}", ${c} theme, dramatic but professional, clean composition, no text, no logo.`}
+function makeCalendar(c){return`Day 1: Main article\nDay 2: Explainer follow-up\nDay 3: Short/Reel\nDay 4: FAQ guide\nDay 5: Related evergreen article`}
+function makeAdPlacement(c){return"1 ad after intro, 1 in middle, 1 before FAQ, 1 sidebar/top banner"}
+function makeRevenue(c){if(c==="Finance")return"$50-$500/month after steady traffic";if(c==="Moving To New York")return"$30-$300/month after steady traffic";return"$10-$150/month after steady traffic"}
+function makeWPCat(c){return c}
+function makeHTMLArticle(t,seo,meta,angle,faq,internal,external){return`<h1>${seo}</h1>
+<p><strong>Summary:</strong> ${meta}</p>
+<h2>What Happened</h2><p>Write verified details here.</p>
+<h2>Why It Matters</h2><p>${angle}</p>
+<h2>Who Is Affected</h2><p>Explain audience impact.</p>
+<h2>What Happens Next</h2><p>Add next steps and updates.</p>
+<h2>FAQ</h2><p>${faq}</p>
+<p><strong>Internal links:</strong> ${internal}</p>
+<p><strong>External sources:</strong> ${external}</p>`}
+function makeWPPost(t,seo,meta,cat,keywords,hashtags,img,html){return`Title: ${seo}
+Category: ${cat}
+Meta Description: ${meta}
+Tags: ${keywords}
+Hashtags: ${hashtags}
+Featured Image Prompt: ${img}
 
-function makeInstagram(title){return `${title}\n\nHere’s what happened, why it matters, and what readers should know next.\n\nRead more on NYC9News.`}
-function makeTweet(title){return `${title}\n\nWhat happened, why it matters, and what comes next — explained simply by NYC9News.`}
-function makeYouTube(title){return `Title: ${title} Explained in 60 Seconds\nDescription: A quick breakdown of what happened, why it matters, and what comes next.`}
+${html}`}
+function makeAffiliateProducts(c){if(c==="Finance")return"Credit cards, banking apps, investment platforms, personal finance tools";if(c==="Moving To New York")return"Moving companies, renters insurance, apartment apps, internet plans";if(c==="AI & Tech")return"AI tools, software, courses, productivity apps";return"Newsletter sponsorship and local business ads"}
+function makeMonetization(c){return`AdSense + affiliate links + sponsored article + newsletter ad + internal ad boxes`}
+function makeSocialPack(t){return`Instagram Reel Hook: ${t}\nX Thread Hook: What happened and why it matters.\nFacebook Caption: Simple breakdown now live on NYC9News.`}
+function makeNewsletter(t){return`Today's quick update: ${t}. Here's what changed, why it matters, and what to watch next.`}
+function makeRSSIdea(t){return`${t} - Simple explanation with key facts and reader impact.`}
 
 function saveTopic(i){let s=JSON.parse(localStorage.getItem("nyc9_saved")||"[]");s.push(lastResults[i]);localStorage.setItem("nyc9_saved",JSON.stringify(s));alert("Saved!")}
 function showSaved(){let s=JSON.parse(localStorage.getItem("nyc9_saved")||"[]");document.getElementById("output").innerHTML=s.length?s.map((x,i)=>`<div class="news"><h3>${i+1}. ${x.title}</h3><pre>${x.full}</pre></div>`).join(""):"No saved topics."}
 function clearSaved(){localStorage.removeItem("nyc9_saved");document.getElementById("output").innerHTML="Saved cleared."}
 function copyAll(){navigator.clipboard.writeText(finalText);alert("Copied!")}
 function copyText(t){navigator.clipboard.writeText(t);alert("Copied!")}
-function bestTopic(){
-  if(!lastResults.length){alert("Pehla Get Live News dabav");return}
-  let best=lastResults[0];
-  lastResults.forEach(x=>{if(x.viral+x.seoScore+x.adsense+x.evergreen > best.viral+best.seoScore+best.adsense+best.evergreen)best=x});
-  document.getElementById("output").innerHTML=`<div class="news"><h2>⭐ Best Topic Today</h2><pre>${best.full}</pre></div>`;
-}
+function bestTopic(){if(!lastResults.length){alert("Pehla Get Live News dabav");return}let best=lastResults[0];lastResults.forEach(x=>{if(x.viral+x.seoScore+x.adsense+x.evergreen > best.viral+best.seoScore+best.adsense+best.evergreen)best=x});document.getElementById("output").innerHTML=`<div class="news"><h2>⭐ Best Topic Today</h2><pre>${best.full}</pre></div>`}
+function compareTopics(){if(!lastResults.length){alert("Pehla Get Live News dabav");return}document.getElementById("output").innerHTML=lastResults.map((x,i)=>`<div class="news"><h3>${i+1}. ${x.title}</h3><p>Viral: ${x.viral} | SEO: ${x.seoScore} | AdSense: ${x.adsense} | RPM: ${x.rpm} | Priority: ${x.priority}</p></div>`).join("")}
 </script>
 </body>
 </html>
