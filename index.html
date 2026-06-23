@@ -3,27 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NYC9News Live Bot V6</title>
+<title>NYC9News Live Bot V7</title>
 <style>
 body{margin:0;font-family:Arial;background:#0f172a;color:white;padding:25px}
-.container{max-width:1100px;margin:auto}
+.container{max-width:1150px;margin:auto}
 .card{background:#1e293b;border-radius:18px;padding:22px;margin-top:18px}
 button,select,input{padding:12px 16px;border-radius:10px;border:0;margin:6px;font-weight:bold}
 button{background:#38bdf8;cursor:pointer}
-.saveBtn{background:#22c55e}
-.clearBtn{background:#ef4444;color:white}
+.green{background:#22c55e}
+.red{background:#ef4444;color:white}
 .news{background:#020617;padding:18px;border-radius:14px;margin:14px 0}
 a{color:#38bdf8}
 small{color:#94a3b8}
 .badge{display:inline-block;background:#16a34a;padding:5px 9px;border-radius:20px;font-size:12px;margin-left:6px}
 .score{display:inline-block;background:#facc15;color:#111;padding:5px 9px;border-radius:20px;font-size:12px;margin:4px}
-pre{white-space:pre-wrap;background:#111827;padding:12px;border-radius:10px;overflow:auto}
+pre{white-space:pre-wrap;background:#111827;padding:12px;border-radius:10px;overflow:auto;font-size:13px}
 </style>
 </head>
 <body>
 
 <div class="container">
-<h1>NYC9News Live Bot V6</h1>
+<h1>NYC9News Live Bot V7</h1>
 
 <div class="card">
 <select id="category">
@@ -37,14 +37,14 @@ pre{white-space:pre-wrap;background:#111827;padding:12px;border-radius:10px;over
 <option value="Moving to New York guide rent jobs cost of living">Moving To New York</option>
 </select>
 
-<input id="customTopic" placeholder="Search any topic e.g. Bitcoin, NYC Rent, Trump, AI">
+<input id="customTopic" placeholder="Search: Bitcoin, NYC Rent, Trump, AI">
 
 <br>
 <button onclick="loadNews()">Get Live News</button>
 <button onclick="loadCustom()">Search Topic</button>
-<button onclick="copyAll()" class="saveBtn">Copy All Prompts</button>
+<button onclick="copyAll()" class="green">Copy All</button>
 <button onclick="showSaved()">View Saved</button>
-<button onclick="clearSaved()" class="clearBtn">Clear Saved</button>
+<button onclick="clearSaved()" class="red">Clear Saved</button>
 
 <div id="output">Click “Get Live News” or search any topic.</div>
 </div>
@@ -71,8 +71,7 @@ async function loadCustom(){
 }
 
 async function loadNews(){
-  const q=document.getElementById("category").value;
-  await fetchNews(q);
+  await fetchNews(document.getElementById("category").value);
 }
 
 async function fetchNews(q){
@@ -110,87 +109,20 @@ async function fetchNews(q){
       count++;
 
       const seoTitle=makeSeoTitle(cleanTitle,q);
+      const meta=makeMeta(cleanTitle,q);
       const angle=makeAngle(q);
       const photo=makePhotoKeyword(q);
-      const meta=makeMeta(cleanTitle,q);
       const tags=makeTags(q);
       const score=makeScore(q,trusted);
       const potential=makePotential(q);
       const competition=makeCompetition(q);
       const pexels=`https://www.pexels.com/search/${encodeURIComponent(photo)}/`;
 
-      const articlePrompt=`Write a 700-word original news article for NYC9News.
+      const articlePackage=makePackage(cleanTitle,item.link,seoTitle,meta,angle,photo,tags,q);
 
-Topic:
-${cleanTitle}
-
-Source:
-${item.link}
-
-SEO Title:
-${seoTitle}
-
-Meta Description:
-${meta}
-
-Photo Keyword:
-${photo}
-
-Article Angle:
-${angle}
-
-Rules:
-- Use simple American English.
-- Do not copy the source article.
-- Write original wording.
-- Add a 2-line summary at the top.
-- Include sections:
-  1. What happened
-  2. Why it matters
-  3. Who is affected
-  4. What happens next
-  5. FAQ
-- Keep tone neutral and factual.
-- Make it useful for USA/NYC readers.`;
-
-      const dataObj={
-        title:cleanTitle,source,link:item.link,seoTitle,meta,angle,photo,tags,score,potential,competition,pexels,articlePrompt
-      };
-
-      lastResults.push(dataObj);
-
-      const block=`TOPIC ${count}: ${cleanTitle}
-
-SOURCE: ${source}
-LINK: ${item.link}
-
-TRENDING SCORE: ${score}/100
-TRAFFIC POTENTIAL: ${potential}
-COMPETITION: ${competition}
-
-SEO TITLE:
-${seoTitle}
-
-META DESCRIPTION:
-${meta}
-
-ARTICLE ANGLE:
-${angle}
-
-PHOTO KEYWORD:
-${photo}
-PEXELS:
-${pexels}
-
-TAGS:
-${tags}
-
-FULL ARTICLE PROMPT:
-${articlePrompt}
-
------------------------------
-`;
-      finalText+=block;
+      const obj={title:cleanTitle,source,link:item.link,seoTitle,meta,angle,photo,tags,score,potential,competition,pexels,articlePackage};
+      lastResults.push(obj);
+      finalText+=articlePackage+"\n\n-----------------------------\n\n";
 
       html+=`
       <div class="news">
@@ -198,19 +130,23 @@ ${articlePrompt}
         <small>Source: ${source}</small>
         ${trusted?'<span class="badge">Trusted</span>':''}
         <br><br>
+
         <span class="score">Score: ${score}/100</span>
         <span class="score">Traffic: ${potential}</span>
         <span class="score">Competition: ${competition}</span>
 
         <br><br><b>SEO Title:</b><br>${seoTitle}
-        <br><br><b>Meta:</b><br>${meta}
-        <br><br><b>Angle:</b><br>${angle}
-        <br><br><b>Photo:</b><br>${photo}
+        <br><br><b>Meta Description:</b><br>${meta}
+        <br><br><b>Article Angle:</b><br>${angle}
+        <br><br><b>Photo Keyword:</b><br>${photo}
         <br><a href="${pexels}" target="_blank">Open Pexels</a>
         <br><br><b>Tags:</b><br>${tags}
-        <br><br><b>Prompt:</b>
-        <pre>${articlePrompt}</pre>
-        <button class="saveBtn" onclick="saveTopic(${count-1})">Save Topic</button>
+
+        <br><br><b>Full Article Package:</b>
+        <pre>${articlePackage}</pre>
+
+        <button class="green" onclick="saveTopic(${count-1})">Save Topic</button>
+        <button onclick="copyOne(${count-1})">Copy This</button>
         <a href="${item.link}" target="_blank">Open Source</a>
       </div>`;
     });
@@ -220,6 +156,95 @@ ${articlePrompt}
   }catch(e){
     output.innerHTML="Live news load નથી થતું. RSS API block/limit હોઈ શકે.";
   }
+}
+
+function makePackage(title,link,seoTitle,meta,angle,photo,tags,q){
+return `NYC9NEWS ARTICLE PACKAGE
+
+TOPIC:
+${title}
+
+SOURCE:
+${link}
+
+SEO TITLE:
+${seoTitle}
+
+META DESCRIPTION:
+${meta}
+
+MAIN KEYWORDS:
+${tags}
+
+ARTICLE ANGLE:
+${angle}
+
+FEATURED IMAGE KEYWORD:
+${photo}
+
+ARTICLE OUTLINE:
+1. Quick Summary
+2. What Happened
+3. Why It Matters
+4. Who Is Affected
+5. What Happens Next
+6. FAQ
+
+FAQ IDEAS:
+Q1. What happened?
+Q2. Why does this matter?
+Q3. Who is affected?
+Q4. What happens next?
+Q5. Where can readers get updates?
+
+SOCIAL MEDIA POST:
+${title}
+Here’s what happened, why it matters, and what readers should know next. Read the full update on NYC9News.
+
+YOUTUBE SHORT TITLE:
+${shortTitle(title)}
+
+YOUTUBE DESCRIPTION:
+A quick explanation of ${title}. NYC9News breaks down what happened, why it matters, and what comes next.
+
+IMAGE PROMPT:
+Realistic editorial news photo style, ${photo}, natural lighting, documentary look, high quality, no text, no logo.
+
+FULL ARTICLE PROMPT:
+Write a 900-word original news article for NYC9News.
+
+Use this topic:
+${title}
+
+Use this source for facts:
+${link}
+
+SEO Title:
+${seoTitle}
+
+Meta Description:
+${meta}
+
+Article Angle:
+${angle}
+
+Rules:
+- Use simple American English.
+- Do not copy the source.
+- Keep it neutral and factual.
+- Add a 2-line summary at the top.
+- Include headings:
+  What Happened
+  Why It Matters
+  Who Is Affected
+  What Happens Next
+  FAQ
+- Make it useful for USA and NYC readers.
+- End with: Follow NYC9News for simple USA and New York updates.`;
+}
+
+function shortTitle(title){
+  return title.length>70 ? title.substring(0,70)+"..." : title+" Explained";
 }
 
 function saveTopic(index){
@@ -235,12 +260,10 @@ function showSaved(){
     document.getElementById("output").innerHTML="No saved topics.";
     return;
   }
-
   let html="<h2>Saved Topics</h2>";
-  let text="";
-
+  finalText="";
   saved.forEach((s,i)=>{
-    text+=`${i+1}. ${s.title}\n${s.seoTitle}\n${s.link}\n\n`;
+    finalText+=s.articlePackage+"\n\n-----------------------------\n\n";
     html+=`
     <div class="news">
       <h3>${i+1}. ${s.title}</h3>
@@ -248,32 +271,40 @@ function showSaved(){
       <b>Meta:</b><br>${s.meta}<br><br>
       <b>Photo:</b><br>${s.photo}<br>
       <a href="${s.pexels}" target="_blank">Open Pexels</a><br><br>
-      <pre>${s.articlePrompt}</pre>
+      <pre>${s.articlePackage}</pre>
       <a href="${s.link}" target="_blank">Open Source</a>
     </div>`;
   });
-
-  finalText=text;
   document.getElementById("output").innerHTML=html;
 }
 
 function clearSaved(){
   localStorage.removeItem("nyc9_saved");
-  alert("Saved topics cleared.");
   document.getElementById("output").innerHTML="Saved topics cleared.";
 }
 
+function copyOne(index){
+  navigator.clipboard.writeText(lastResults[index].articlePackage);
+  alert("Copied this topic!");
+}
+
+function copyAll(){
+  navigator.clipboard.writeText(finalText || document.getElementById("output").innerText);
+  alert("Copied!");
+}
+
 function makeSeoTitle(title,q){
-  if(q.toLowerCase().includes("finance")||q.toLowerCase().includes("stock")||q.toLowerCase().includes("bitcoin")) return title+" Explained: What It Means for Your Money";
-  if(q.toLowerCase().includes("new york")) return title+" Explained for New Yorkers";
-  if(q.toLowerCase().includes("ai")) return title+" Explained: What It Means for Jobs and Tech";
-  if(q.toLowerCase().includes("moving")) return title+" Guide: What Newcomers Should Know";
+  const x=q.toLowerCase();
+  if(x.includes("finance")||x.includes("stock")||x.includes("bitcoin")||x.includes("usd")) return title+" Explained: What It Means for Your Money";
+  if(x.includes("new york")) return title+" Explained for New Yorkers";
+  if(x.includes("ai")) return title+" Explained: What It Means for Jobs and Tech";
+  if(x.includes("moving")) return title+" Guide: What Newcomers Should Know";
   return title+" Explained: What Readers Should Know";
 }
 
 function makeAngle(q){
   const x=q.toLowerCase();
-  if(x.includes("finance")||x.includes("stock")||x.includes("bitcoin")) return "Focus on money impact, markets, savings, loans, credit cards, inflation, and everyday Americans.";
+  if(x.includes("finance")||x.includes("stock")||x.includes("bitcoin")||x.includes("usd")) return "Focus on money impact, markets, savings, loans, credit cards, inflation, and everyday Americans.";
   if(x.includes("new york")) return "Focus on NYC residents, commuters, rent, subway, safety, and daily life impact.";
   if(x.includes("ai")) return "Explain how this affects jobs, students, businesses, and future technology.";
   if(x.includes("business")) return "Explain business and consumer impact in simple language.";
@@ -285,7 +316,7 @@ function makeAngle(q){
 
 function makePhotoKeyword(q){
   const x=q.toLowerCase();
-  if(x.includes("finance")||x.includes("stock")||x.includes("bitcoin")) return "Wall Street money stock market banking";
+  if(x.includes("finance")||x.includes("stock")||x.includes("bitcoin")||x.includes("usd")) return "Wall Street money stock market banking";
   if(x.includes("new york")) return "New York City subway street skyline";
   if(x.includes("ai")) return "AI technology laptop office";
   if(x.includes("business")) return "Wall Street business office";
@@ -302,7 +333,7 @@ function makeMeta(title,q){
 
 function makeTags(q){
   const x=q.toLowerCase();
-  if(x.includes("finance")||x.includes("stock")) return "Finance, Stock Market, Federal Reserve, Inflation, Money, USA News";
+  if(x.includes("finance")||x.includes("stock")||x.includes("usd")) return "Finance, Stock Market, Federal Reserve, Inflation, Money, USA News";
   if(x.includes("new york")) return "NYC News, New York, Local News, USA News";
   if(x.includes("ai")) return "AI News, Technology, Jobs, USA Tech";
   if(x.includes("business")) return "Business, Economy, USA News";
@@ -316,7 +347,7 @@ function makeScore(q,trusted){
   let score=60;
   const x=q.toLowerCase();
   if(trusted)score+=15;
-  if(x.includes("finance")||x.includes("stock"))score+=12;
+  if(x.includes("finance")||x.includes("stock")||x.includes("usd"))score+=12;
   if(x.includes("new york"))score+=10;
   if(x.includes("ai"))score+=10;
   if(x.includes("moving"))score+=8;
@@ -338,11 +369,6 @@ function makeCompetition(q){
   if(x.includes("ai"))return "Medium";
   if(x.includes("new york"))return "Medium";
   return "High";
-}
-
-function copyAll(){
-  navigator.clipboard.writeText(finalText || document.getElementById("output").innerText);
-  alert("Copied!");
 }
 </script>
 </body>
