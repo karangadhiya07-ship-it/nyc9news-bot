@@ -172,11 +172,19 @@ function makeScore(q,trusted){let s=60;if(trusted)s+=15;if(q.toLowerCase().inclu
 function makePotential(q){let x=q.toLowerCase();if(x.includes("finance"))return"High";if(x.includes("ai"))return"Medium-High";return"Medium"}
 function makeCompetition(q){let x=q.toLowerCase();if(x.includes("finance"))return"High";if(x.includes("new york"))return"Medium";return"High"}
 
- function makeAIImagePrompt(title,q){
+ function makeAIImagePrompt(title,q){let titleLower = title.toLowerCase();
   let x=q.toLowerCase();
 
-  if(x.includes("finance")||x.includes("stock")||x.includes("bitcoin")||x.includes("usd")){
-    return `Realistic editorial financial news photo about "${title}", Wall Street style office, person checking market data on laptop, natural lighting, documentary photojournalism, real-world look, no text, no logo, not cartoon, not AI-looking.`;
+if(
+x.includes("finance") ||
+x.includes("stock") ||
+x.includes("bitcoin") ||
+x.includes("usd") ||
+titleLower.includes("bitcoin") ||
+titleLower.includes("crypto") ||
+titleLower.includes("etf")
+){
+    return `Ultra realistic editorial financial news photograph about "${title}", Wall Street traders, stock market screens, financial district atmosphere, realistic people, natural lighting, Reuters style photojournalism, authentic news photography, professional DSLR camera, no text, no logo, highly realistic.`;
   }
 
   if(x.includes("new york")||x.includes("nyc")){
